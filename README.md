@@ -1,54 +1,159 @@
-# 临场面试提示器
+# LiveCue（临场）
 
-Windows 桌面首版。面试前填写简历、目标岗位和想法；面试时采集系统声音与可选麦克风，结合对话生成回答要点和口述稿。可以选择定时分析会议画面。
+<div align="center">
+<a href="https://github.com/GPDdev/LiveCue/releases"><img alt="Version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-126b60"></a> <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-0078d4"> <img alt="JavaScript" src="https://img.shields.io/badge/language-JavaScript-f7df1e"> <img alt="17 local tests passed" src="https://img.shields.io/badge/local_tests-17_passed-2e7d32"> <img alt="License not specified" src="https://img.shields.io/badge/license-not_specified-lightgrey">
+</div>
 
-## 使用
+<p align="center">听清问题，说出自己的答案。</p>
 
-打开 `dist/InterviewHelper-0.1.0-x64.exe`，无需安装 Node.js。首次启动自解压需要一些时间。当前便携版没有数字签名。
+Windows 桌面面试表达助手。面试前填写简历、目标岗位和个人想法；面试时将会议声音转为文字，结合真实经历生成回答要点与口述稿。支持自带 OpenAI 兼容 API，以及可选的会议画面观察。
 
-1. 在“面试准备”粘贴简历、岗位要求和个人想法。支持导入 TXT、Markdown；PDF、Word 请复制文字后粘贴。保存准备内容。
-2. 在“API 设置”配置回答模型与语音转写。分别填写 Base URL、模型名和 API Key；两项可以来自不同服务商。
-3. 如需分析画面，配置支持图片输入的模型，或沿用支持图片的回答模型。保存后可点击各自的测试按钮。测试会实际调用 API，可能产生费用。
-4. 在工作台输入一个问题，先验证回答提示。也可以点击“体验本地示例”，该入口不调用 API、不修改个人资料。
-5. 点击“开始面试”，选择会议窗口或屏幕。麦克风默认开启，画面分析默认关闭。按需勾选后点击画面来源开始采集。
-6. 阅读回答要点，需要时展开口述稿。可以置顶、进入小窗，或手动补充问题。小窗保留开始、停止采集按钮。
-7. 结束时点击“停止采集”。需要保留对话时点击“导出”；关闭程序后，未导出的对话不会恢复。
+[下载 Windows 便携版](https://github.com/GPDdev/LiveCue/releases/latest) / [报告问题](https://github.com/GPDdev/LiveCue/issues)
 
-提示只供参考。模型被要求仅使用已提供的真实经历，资料缺失时标注待补充，仍需自行核实输出内容。
+![LiveCue 工作台，本地示例数据](docs/images/workspace.png)
 
-## API 接口要求
+> [!NOTE]
+> 截图来自不调用 API 的本地示例。LiveCue 根据你提供的资料辅助组织表达，输出仍需核实；画面功能描述可见事实，无法可靠识别真实心情或意图。请遵守面试或会议对录制、数据处理和辅助工具的约定。
 
-| 能力 | 接口 | 请求与响应 |
-| --- | --- | --- |
-| 回答 | `POST {Base URL}/chat/completions` | `model`、`messages`、`stream`、`max_tokens`；支持 SSE `choices[].delta.content`，也兼容 JSON `choices[].message.content` |
-| 转写 | `POST {Base URL}/audio/transcriptions` | multipart：`file` 为单声道 PCM16 WAV，`model`、`response_format=json`；响应须含 `text` |
-| 视觉 | `POST {Base URL}/chat/completions` | 多模态 `messages`，含 `image_url` 的 JPEG data URL，`detail=low`；模型须支持图片 |
+## 目录
 
-Base URL 示例：`https://api.openai.com/v1`，不要在后面追加 `chat/completions`。远端 API 必须使用 HTTPS；本机 `localhost`、`127.0.0.1`、`[::1]` 可以使用 HTTP 和空 Key。接口地址不接受 URL 内嵌密码、查询参数或片段，不跟随重定向。
+- [功能](#功能)
+- [安装](#安装)
+- [使用](#使用)
+- [API 配置](#api-配置)
+- [数据与隐私](#数据与隐私)
+- [限制与故障处理](#限制与故障处理)
+- [开发与验证](#开发与验证)
+- [参与贡献](#参与贡献)
+- [许可证](#许可证)
 
-默认填写的 `gpt-4o-mini`、`whisper-1` 是示例配置，需按服务商实际支持的模型修改。程序不会把只有文本能力的接口自动转换成语音或视觉接口；不支持仅提供 Responses API、专有 WebSocket 转写协议等服务。
+## 功能
 
-保存后 Key 不会回填到界面。同一 Base URL 下留空表示继续使用已有 Key；改动地址后须重填，避免将原服务的 Key 自动发送到新地址。清除按钮可移除全部本机准备内容和 API 配置。
+| 能力 | 当前实现 |
+| --- | --- |
+| 面试准备 | 填写简历、岗位要求和表达偏好，支持中文与英文回答 |
+| 简历导入 | 粘贴文字，或导入 TXT、Markdown 文件 |
+| 声音采集 | Windows 系统播放声音与可选麦克风独立转写，记录采集来源和时间 |
+| 回答提示 | 会议转写触发流式回答，显示要点、可展开口述稿与待确认信息 |
+| 画面观察 | 默认关闭，开启后定时发送所选窗口或屏幕的截图 |
+| 自带 API | 回答、语音转写和视觉分别配置地址、Key 与模型，也可让视觉沿用回答配置 |
+| 面试工作台 | 置顶、小窗、手动补充问题、重新生成提示、导出对话和最近一次回答 |
+| 本地存储 | 准备内容和 API 配置可使用系统加密保存，也可仅在本次运行使用 |
 
-## 采集、延迟与数据
+## 安装
 
-- 系统声音使用 Windows loopback，包含电脑整体播放声音，不局限于所选会议窗口。来源标签表示采集通道，不提供说话人识别；建议使用耳机，减少麦克风收到扬声器声音。
-- 约每六秒上传一个有声音的 WAV 分块，静音分块不上传。延迟为分块等待、语音服务和回答服务耗时之和。固定边界可能截断句子，可手动补充识别不完整的问题。停止时立即停止设备、取消进行中的请求并丢弃未完成分块，不再补传尾段。
-- 两路转写独立串行，按采集时间排列记录。会议声音触发自动回答，麦克风转写仅补充候选人已说的内容。提示使用最近 50 段上下文；完整对话仅保留在内存中供导出。
-- 请求超时为 45 秒。转写连续失败三次或积压超过三段时停止采集并通知；视觉失败会暂停截图上传，音频继续。重新开始面试可重试。
-- 画面开启后立即尝试一帧，此后每 20 秒一帧，宽度不超过 960 像素。仅发送所选画面，不另开摄像头。最小化窗口可能导致画面冻结；单帧不代表完整动作变化，也无法可靠判断真实心情、人格、健康或意图。超过一分钟的观察不用于新回答。
-- 简历、想法和最近转写会发送到回答 API；音频发往转写 API；开启视觉后截图发往视觉 API。请求已发出后，停止或取消无法撤回服务商已接收的数据，也不能保证免除已发生的计费。请核对服务商的数据政策和会议的辅助工具约定。
-- 应用不默认保存音频或截图。选择“保存到本机”时，准备内容和 API Key 使用 Electron safeStorage 加密保存在 `%APPDATA%/interview-helper/settings.enc`。这不隔离同一 Windows 用户权限下的所有程序。取消保存会删除已保存的配置，仅保留本次运行的内存配置。
-- 导出文件包含对话和最近一次提示，为普通明文 TXT。程序和系统的缓存、崩溃转储不属于安全擦除保证；清除配置不会删除用户已导出的文件或服务商数据。
+### Windows 便携版
 
-## 开发与检查
+1. 打开 [Releases](https://github.com/GPDdev/LiveCue/releases/latest)，下载 `InterviewHelper-0.1.0-x64.exe`。
+2. 在 Windows 10/11 x64 上双击运行，不需要安装 Node.js。
+3. 首次启动需要解压运行文件，请稍候。
 
-需要 Windows 10/11 x64、Node.js 22.12 或更新版本。
+当前便携版未进行数字签名。程序启动后显示中文名称“临场面试提示器”。
+
+### 从源码运行
+
+需要 Windows 10/11 x64，以及 Node.js 22.12 或更新版本。
 
 ```powershell
+git clone https://github.com/GPDdev/LiveCue.git
+cd LiveCue
 npm ci
 npx --no-install install-electron --no
 npm start
+```
+
+Electron 运行文件需要下载。若安装或首次运行失败，请先检查 npm 和 Electron 下载源的网络连通性。
+
+## 使用
+
+1. **准备资料。** 在“面试准备”填写简历、目标岗位和个人想法，选择回答语言并保存。PDF、Word 请复制其中的文字后粘贴。
+2. **配置 API。** 在“API 设置”填写回答与转写的 Base URL、模型名和 API Key。若需要分析画面，选择支持图片输入的模型。保存后可分别测试接口，测试可能产生少量费用。
+3. **先试一个问题。** 在工作台手动输入问题，检查模型能否正常返回提示。也可点击“体验本地示例”，无需配置 Key，该入口不调用 API。
+4. **开始采集。** 点击“开始面试”，选择会议窗口或屏幕。麦克风默认开启，可以取消；画面分析默认关闭，需要时再勾选。
+5. **参考提示。** 先阅读回答要点，再按需展开口述稿。可以置顶、切换小窗，或手动补充识别不完整的问题。
+6. **结束并导出。** 点击“停止采集”。需要保留记录时点击“导出”，保存对话与最近一次提示。关闭程序后，未导出的对话不会恢复。
+
+生成提示时会使用已保存的准备内容和最近 50 段对话。修改资料或配置前，需要先停止采集。
+
+## API 配置
+
+三个能力可以使用不同服务商。程序直接请求你配置的接口，不经过项目作者的业务服务器。
+
+| 配置项 | 填写方式 |
+| --- | --- |
+| Base URL | 服务商的 API 根路径，例如 `https://<YOUR_API_HOST>/v1`，不要追加具体接口名 |
+| 模型名 | 服务商提供的准确模型 ID，例如 `<YOUR_CHAT_MODEL>`、`<YOUR_ASR_MODEL>` |
+| API Key | 你自己的 `<YOUR_API_KEY>`；本机无鉴权服务可以留空 |
+| 视觉沿用回答配置 | 开启后使用回答接口的地址、Key 和模型，该模型必须支持图片 |
+| 保存到本机 | 将准备内容和 API 配置加密保存；取消后删除已有持久化配置，仅本次运行有效 |
+
+### 兼容接口
+
+| 能力 | 接口 | 请求与响应 |
+| --- | --- | --- |
+| 回答 | `POST {Base URL}/chat/completions` | 发送 `model`、`messages`、`stream`、`max_tokens`；支持 SSE `choices[].delta.content`，也兼容 JSON `choices[].message.content` |
+| 语音转写 | `POST {Base URL}/audio/transcriptions` | multipart 上传单声道 PCM16 WAV，含 `file`、`model`、`response_format=json`；响应须含 `text` |
+| 画面分析 | `POST {Base URL}/chat/completions` | 使用多模态 `messages`，含 JPEG data URL 的 `image_url` 与 `detail=low` |
+
+远端 API 必须使用 HTTPS。本机 `localhost`、`127.0.0.1`、`[::1]` 可以使用 HTTP。地址不能包含内嵌账号密码、查询参数或片段，请求不跟随重定向。
+
+Key 保存后不会回填到界面。同一 Base URL 下留空可继续使用已有 Key；修改地址后须重新填写，避免将原服务的 Key 发送到新地址。
+
+> [!IMPORTANT]
+> 文本接口可用不代表服务商同时提供语音转写或图片输入。默认模型名只是示例，请按服务商实际支持的模型修改。当前不适配仅提供 Responses API、专有 WebSocket 转写协议等服务。
+
+## 数据与隐私
+
+| 数据 | 发送位置 | 本地保存 |
+| --- | --- | --- |
+| 简历、岗位、想法和最近对话 | 回答 API | 准备内容可选择加密保存；对话只保存在内存，除非主动导出 |
+| 有声音的音频分块 | 语音转写 API | 不默认保存音频文件 |
+| 所选画面的截图 | 开启画面分析时发送到视觉 API | 不默认保存截图文件 |
+| API Key | 发送到对应服务商，用于鉴权 | 主进程持有，可使用系统加密保存 |
+| 导出的对话与最近提示 | 用户选择的本机文件 | 明文 TXT，由用户自行管理 |
+
+选择保存到本机时，配置文件为 Windows 应用数据目录下的 `settings.enc`，使用 Electron safeStorage 加密。系统加密不能隔离同一 Windows 用户权限下的所有程序。可以在设置页清除已保存的准备内容和 API 配置。
+
+停止采集会释放设备、取消进行中的请求并丢弃未完成的音频分块。已经发送给服务商的数据无法撤回，取消也不能保证免除已发生的计费。清除本机配置不会删除已导出的文件或服务商持有的数据。
+
+系统播放声音包含电脑上其他程序的声音，不局限于所选会议窗口。建议使用耳机，减少麦克风重复收到扬声器声音。项目不提供账号、云同步、后台自动录制或使用统计上传。
+
+## 限制与故障处理
+
+- **提示存在延迟。** 音频约每六秒分块，静音分块不上传；实际等待还包括转写和回答服务的响应时间。固定边界可能截断句子，停止时不补传尾段。
+- **来源标签不等于说话人身份。** 系统声音与麦克风仅表示采集通道，当前没有说话人识别。
+- **画面是间隔观察。** 开启后立即尝试一帧，此后每 20 秒一帧，截图宽度不超过 960 像素。最小化窗口可能使画面冻结；单帧不能代表完整动作变化。超过一分钟的观察不用于新回答。
+- **接口失败会显示通知。** 每次请求最多等待 45 秒；转写连续失败三次或队列积压超过三段时停止采集。视觉失败会暂停截图上传，音频采集继续。检查配置后可重新开始。
+- **兼容范围有待实机验证。** 当前仅提供 Windows x64 版本；真实模型准确率、费用与延迟，以及各会议软件和音频设备的兼容性，需要自行试用确认。
+
+<details>
+<summary>常见 API 错误</summary>
+
+| 状态码 | 优先检查 |
+| --- | --- |
+| 401 / 403 | Key、模型权限和服务商访问权限 |
+| 404 | Base URL 是否多写了接口路径，模型和接口是否存在 |
+| 413 | 服务商的上传大小限制 |
+| 429 | 余额、配额和请求频率 |
+| 超时 / 网络失败 | API 地址、网络、服务状态与代理配置 |
+
+</details>
+
+## 开发与验证
+
+使用 Electron 和原生 HTML、CSS、JavaScript。当前没有前端框架，也没有应用运行时第三方业务依赖。
+
+```text
+src/
+  main.cjs          主进程、加密配置、IPC、API 调用与窗口管理
+  preload.cjs       限定的主进程与界面桥接接口
+  api.cjs           转写、流式回答、视觉请求与提示词
+  audio.mjs         WAV 编码与音频采集
+  pcm-worklet.js    六秒分块与静音门限
+  renderer.mjs      工作台、准备、设置和采集状态
+  index.html        页面结构
+  styles.css        界面样式
+test/               单元测试与 Electron 桌面测试
 ```
 
 ```powershell
@@ -57,10 +162,20 @@ npm run test:ui
 npm run dist
 ```
 
-`npm test` 验证 WAV、静音门限、API 路径和配置、转写上传、SSE 边界、错误处理及视觉请求。桌面测试通过 Playwright 启动真实 Electron，使用合成音画和本机模拟 API，验证界面、加密保存和重启恢复、双通道采集、画面请求、停止设备与网络取消、配置清除和旧回答隔离，不采集真实会议、不使用收费 Key。
+`npm run dist` 生成 Windows x64 便携版，输出到 `dist/`。
 
-桌面测试数据在 `.test-data/`，界面截图在 `outputs/`，均已加入忽略文件。测试不会自动验证腾讯会议、Teams、Zoom 等真实会议软件的设备兼容性，也不能代表真实模型的准确率和延迟。
+2026-11-20 本机验证结果：11 项单元测试和 6 项 Electron 桌面测试通过；便携版独立启动与本地示例已验证。上述徽章记录本机检查结果，不代表持续集成状态。
 
-应用使用隔离渲染进程、沙盒、CSP、限定 IPC 和文本渲染；Key 与网络请求在主进程处理。没有账号、业务服务器、云同步、后台自动录制或上传分析统计。
+单元测试覆盖 WAV、静音门限、API 路径、Key 保留规则、转写上传、SSE 边界、取消、错误与视觉请求。桌面测试使用合成音画和本机模拟 API，覆盖资料保存、加密重启恢复、双通道采集、可选画面、停止设备、配置清除及旧回答隔离，不采集真实会议、不调用收费 API。
 
-实现参考：[Electron 系统声音采集接口](https://www.electronjs.org/docs/latest/api/session#sessetdisplaymediarequesthandlerhandler-opts)、[加密存储接口](https://www.electronjs.org/docs/latest/api/safe-storage)、[语音转写接口格式](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)。
+测试数据、日志、依赖、构建输出和本地交接文件均不纳入 Git 提交。应用使用渲染进程沙盒、上下文隔离、CSP、限定 IPC 与文本渲染。
+
+## 参与贡献
+
+欢迎通过 [Issues](https://github.com/GPDdev/LiveCue/issues) 提交可复现的问题或改进建议。报告问题时请说明 Windows 与应用版本、采集模式、服务商接口类型、复现步骤和错误信息。请勿提交 API Key、真实简历、会议录音或含个人资料的日志。
+
+提交修改前运行相关测试。新增 API 适配、采集方式或保存行为时，请同步说明接口要求、数据去向和验证范围。
+
+## 许可证
+
+当前尚未指定项目许可证，仓库暂不提供 `LICENSE` 文件。
