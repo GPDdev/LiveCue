@@ -1,0 +1,39 @@
+{
+  "name": "interview-helper",
+  "productName": "临场面试提示器",
+  "version": "0.1.0",
+  "description": "结合个人经历、会议转写和可选画面的 Windows 面试提示器",
+  "author": "GPDdev",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs test/*.test.mjs",
+    "test:ui": "playwright test",
+    "dist": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "11.0.1"
+  },
+  "build": {
+    "appId": "org.gpddev.interviewhelper",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "artifactName": "InterviewHelper-${version}-${arch}.${ext}"
+  }
+}

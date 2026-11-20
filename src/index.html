@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'">
+  <title>临场面试提示器</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="renderer.mjs"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="#workspace" aria-label="临场，返回工作台"><span class="brand-mark" aria-hidden="true">临</span><span>临场<small>面试提示器</small></span></a>
+    <nav aria-label="主要导航">
+      <button class="nav active" data-tab="workspace" aria-current="page">面试工作台</button>
+      <button class="nav" data-tab="profile">面试准备</button>
+      <button class="nav" data-tab="settings">API 设置</button>
+    </nav>
+    <div class="window-actions"><button id="pin" class="quiet" aria-pressed="false">置顶</button><button id="compact" class="quiet">进入小窗</button></div>
+  </header>
+  <main>
+    <section id="workspace" class="page">
+      <div class="page-heading"><div><h1>把注意力留给对话</h1><p>从你的真实经历出发，找到下一句的方向。</p></div><div class="session-actions"><span id="clock">00:00</span><button id="start" class="primary">开始面试</button><button id="stop" class="danger" disabled>停止采集</button></div></div>
+      <div class="session-strip"><span id="session-state" role="status"><span class="status-dot"></span>尚未开始</span><span class="audio-state">系统声音 <meter id="system-level" min="0" max="0.15" value="0" aria-label="系统声音音量"></meter></span><span class="audio-state">麦克风 <meter id="mic-level" min="0" max="0.15" value="0" aria-label="麦克风音量"></meter></span><span id="video-state">画面分析关闭</span><span id="pending-state"></span></div>
+      <div class="workspace-grid">
+        <section class="conversation panel" aria-labelledby="conversation-title"><div class="panel-heading"><h2 id="conversation-title">对话记录</h2><button id="export" class="text-button">导出</button></div><p class="caption">来源标签表示采集通道，不保证说话人身份。</p><div id="transcript" class="transcript"><div class="empty-state"><span class="empty-symbol" aria-hidden="true">“</span><h3>从第一个问题开始</h3><p>开始采集会议声音，或在下方手动输入问题。</p><button id="demo" class="secondary">体验本地示例</button></div></div></section>
+        <section class="suggestion panel" aria-labelledby="suggestion-title"><div class="panel-heading"><h2 id="suggestion-title">现在可以这样回答</h2><span id="hint-state" class="caption" role="status">等待问题</span></div><div id="points" class="points">先听清问题，再把重点说具体。</div><details id="draft-details" class="draft-block"><summary>展开口述稿</summary><p id="draft">生成提示后，这里会出现可供参考的完整表达。</p></details><div id="check-wrap" class="check-block" hidden><h3>需要你确认</h3><p id="check"></p></div><details class="visual-block"><summary>画面补充观察 <span id="visual-time"></span></summary><video id="preview" muted playsinline hidden aria-label="当前所选会议画面预览"></video><p id="visual">未开启画面分析。可在开始面试时选择，默认不上传截图。</p></details><div class="suggestion-footer"><span>只引用已提供的经历，缺失信息会标明。</span><button id="regenerate" class="text-button" disabled>重新生成</button></div></section>
+      </div>
+      <form id="question-form" class="question-bar"><label for="question">手动补充</label><input id="question" maxlength="12000" placeholder="输入面试官的问题，或补充刚才没识别清楚的内容" autocomplete="off"><button type="submit" class="primary">生成提示</button></form>
+      <p class="footnote">采集内容发送到你配置的 API。系统声音包含其他程序的播放声，建议使用耳机。对话仅保存在内存，关闭前按需导出，并遵守会议约定。</p>
+    </section>
+
+    <section id="profile" class="page form-page" hidden>
+      <div class="page-heading"><div><h1>让建议有你的依据</h1><p>写下真实经历，以及这场面试中想表达的重点。</p></div><button id="save-profile" class="primary">保存准备内容</button></div>
+      <div class="profile-grid"><div class="panel form-panel"><div class="panel-heading"><h2>个人简历</h2><label class="text-button file-button">导入文本<input id="resume-file" type="file" accept=".txt,.md,text/plain,text/markdown" hidden></label></div><p class="caption">可粘贴 PDF / Word 中的文字，或导入 TXT、Markdown 文件。</p><label class="sr-only" for="resume">简历内容</label><textarea id="resume" maxlength="40000" rows="18" placeholder="教育经历、项目、你的具体贡献、成果和技能。尽量保留可验证的细节。"></textarea></div><div class="panel form-panel"><h2>这场面试</h2><label for="role">目标岗位与要求</label><textarea id="role" maxlength="4000" rows="5" placeholder="岗位名称、职责、面试方向或职位描述"></textarea><label for="ideas">个人想法与表达偏好</label><textarea id="ideas" maxlength="12000" rows="8" placeholder="想突出哪些项目？哪些问题需要谨慎回答？有哪些真实故事或想向对方提的问题？"></textarea><label for="language">回答语言</label><select id="language"><option>中文</option><option>English</option></select><p class="caption">未提供的经历和数字不会作为事实补全。</p></div></div>
+    </section>
+
+    <section id="settings" class="page form-page" hidden>
+      <div class="page-heading"><div><h1>连接你自己的模型</h1><p>分别配置转写与回答能力；画面分析需要支持图片的模型。</p></div><button id="save-settings" class="primary">保存配置</button></div>
+      <p class="notice">使用 OpenAI 兼容接口。Base URL 填到版本路径，例如 https://api.openai.com/v1，程序会追加接口路径。文本模型服务不一定提供语音转写或图片输入。</p>
+      <div id="providers" class="providers"></div>
+      <div class="settings-footer panel"><label class="check-label"><input id="remember" type="checkbox" checked>将准备内容与 API 配置加密保存到本机</label><p class="caption">取消后仅本次运行有效，并移除已保存的配置。Key 不会回填；地址不变时留空可保留已有 Key，修改地址须重填。测试会调用模型，可能产生少量费用。</p><button id="clear-settings" class="danger-text">清除本机准备内容和 API 配置</button></div>
+    </section>
+  </main>
+  <div id="notification" class="notification" role="status" hidden><span id="notification-text"></span><button id="dismiss-notification" class="quiet" aria-label="关闭通知">关闭</button></div>
+  <dialog id="source-dialog" aria-labelledby="source-title"><div class="panel-heading"><h2 id="source-title">选择会议所在画面</h2><button id="close-source" class="quiet">取消</button></div><p>系统声音始终采集电脑整体播放声音。不开启分析时，画面仅用于建立采集源，不发送到 API。</p><div class="capture-options"><label class="check-label"><input id="use-mic" type="checkbox" checked>同时采集我的麦克风</label><label class="check-label"><input id="use-video" type="checkbox">每 20 秒分析一帧会议画面</label></div><p class="caption">画面观察描述可见事实，无法可靠判断真实心情或意图。最小化窗口可能导致画面停止更新。</p><div id="source-list" class="source-list" aria-live="polite"></div></dialog>
+  <dialog id="clear-dialog" aria-labelledby="clear-title"><h2 id="clear-title">清除本机配置？</h2><p>这会删除已保存的简历、想法和 API Key，并清空界面。已导出的文件不会删除。</p><div class="dialog-actions"><button id="cancel-clear" class="secondary">保留</button><button id="confirm-clear" class="danger">确认清除</button></div></dialog>
+</body>
+</html>
